@@ -10,8 +10,6 @@ The download completes normally, so I'm really not sure what's going on. The Ope
 
 
 # Usage
-usage: generateMetalink.py [-h] [--urlfile URLFILE] [--chunksize CHUNKSIZE] [--outputpath OUTPUTPATH]
-
 The program expects a file (called the 'urlfile') containing the list of download urls (by default called 'links.txt'). You can specify the file using the `--urlfile` argument.
 
 An example file is shown below:
@@ -28,6 +26,9 @@ The second line with the `~` separated by a space will not try to hash the file,
 
 The third line is used when the download url doesn't match the desired filename. The program will search for `saved_filename.exe` in the directory where the 'urlfile' is to calculate the checksum, but still try to download the file from the given URL. When a downloader downloads the file, it will be saved with the name `saved_filename.exe`
 
+## Arguments
+
+usage: generateMetalink.py [-h] [--urlfile URLFILE] [--chunksize CHUNKSIZE] [--outputpath OUTPUTPATH]
 
 --urlfile (default:'links.txt') -> The filepath of the urlfile containing the list of urls. The folder the urlfile is in will be searched for files to compute the checksums (sha-1)
 
