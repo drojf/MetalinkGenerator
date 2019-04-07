@@ -25,6 +25,8 @@ file_nohash_xml_template =  """
   </file>
 """
 
+default_chunk_size = (1 << 24) # 16mb chunks
+
 #this is probably slow - but how do you reset the hash object otherwise?
 def getHash(bytes):
     return hashlib.sha1(bytes).hexdigest()
@@ -66,8 +68,8 @@ def makePartialMetalinkForFile(input_file_path, download_url, piece_size):
 
 parser = argparse.ArgumentParser(description='Create a metalink which downloads the urls listed in a text file (urlfile). This program will search the directory of the text file for files which match the download links in the text file.')
 parser.add_argument('--urlfile', type=str, default='links.txt', help='Path to the text file containing URLs to be added to the metalink. The containing folder will be scanned for files.')
-parser.add_argument('--chunksize', type=int, default=(2 << 21), help='Piece size/Chunk size for calculating checksums (in bytes)')
-parser.add_argument('--outputpath', type=str, default=None, help='Filepath where the .meta4 file will be placed')
+parser.add_argument('--chunksize', type=int, default=default_chunk_size, help='Piece size/Chunk size for calculating checksums (in bytes)')
+parser.add_argument('--outputpath', type=str, default='metalink.meta4', help='Filepath where the .meta4 file will be placed')
 
 args = parser.parse_args()
 
