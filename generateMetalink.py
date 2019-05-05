@@ -58,12 +58,16 @@ def make_metalink(input_file_path: str, download_url: str, piece_size: int) -> s
 """
 
 
-def write_metalink_for_file(website_url: str, web_root_path: str, relative_path: str, piece_size: int):
-    url = quote(urljoin(website_url, relative_path))
+def write_metalink_for_file(website_url: str, web_root_path: str, file_path: str, piece_size: int):
+    relative_path = os.path.relpath(file_path, web_root_path)
+    url = urljoin(website_url, quote(relative_path))
 
-    metafile_output_path = relative_path + '.meta4'
+    metafile_output_path = file_path + '.meta4'
+
+    metafile_as_string = make_metalink(file_path, url, piece_size)
+
     with open(os.path.join(web_root_path, metafile_output_path), 'w', encoding='utf-8') as outFile:
-        outFile.write(make_metalink(relative_path, url, piece_size))
+        outFile.write(metafile_as_string)
 
     print(f"Wrote metafile to [{metafile_output_path}]")
 
