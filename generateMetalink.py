@@ -1,8 +1,10 @@
 import hashlib
 import os
 import argparse
-from typing import List, BinaryIO
-from urllib.parse import urljoin, quote
+from pathlib import Path
+import sys
+from typing import BinaryIO
+from urllib.parse import urlparse, unquote
 
 
 # metalink template based on opensuse metalink
@@ -12,7 +14,7 @@ def get_hash(data: bytes) -> str:
     return hashlib.sha1(data).hexdigest()
 
 
-def get_partial_and_full_sha1_hash(file: BinaryIO, piece_size: int) -> (str, List[str], int):
+def get_partial_and_full_sha1_hash(file: BinaryIO, piece_size: int) -> tuple[str, list[str], int]:
     full_hash_generator = hashlib.sha1()
 
     filesize = 0
@@ -58,35 +60,47 @@ def make_metalink(input_file_path: str, download_url: str, piece_size: int) -> s
 """
 
 
-def write_metalink_for_file(website_url: str, web_root_path: str, file_path: str, piece_size: int):
-    relative_path = os.path.relpath(file_path, web_root_path)
-    url = urljoin(website_url, quote(relative_path))
+def write_metalink_for_file(url: str, chunk_size: int):
+    # Extract the filename from the URL (See https://stackoverflow.com/a/18727481/848627)
+    path_with_encoded_characters = urlparse(url).path
+    path = unquote(path_with_encoded_characters)
+    filename = Path(path).name
 
-    metafile_output_path = file_path + '.meta4'
+    # Check the file to be checksummed actually exists before continuing
+    if not os.path.exists(filename) or not os.path.isfile(filename):
+        print(f"ERROR: Couldn't find file [{filename}] to generate metalink from (at [{os.path.abspath(filename)}])")
+        print(f"HINT: To fix this, place the file next to this script (you can also download the file from [{url}] if the URL is live)")
+        exit(-1)
 
-    metafile_as_string = make_metalink(file_path, url, piece_size)
-
-    with open(os.path.join(web_root_path, metafile_output_path), 'w', encoding='utf-8') as outFile:
+    # Build and write the metafile to disk
+    metafile_output_path = filename + '.meta4'
+    metafile_as_string = make_metalink(filename, url, chunk_size)
+    with open(os.path.join(metafile_output_path), 'w', encoding='utf-8') as outFile:
         outFile.write(metafile_as_string)
 
     print(f"Wrote metafile to [{metafile_output_path}]")
+    print(f" - filename: [{filename}]")
+    print(f" - url: [{url}]")
+    print(f" - chunksize: {chunk_size} bytes")
 
 
 default_chunk_size = (1 << 24)
 
-parser = argparse.ArgumentParser(description='Create a metalink from a given file')
+parser = argparse.ArgumentParser(description='Create a metalink from a given URL. The file at the URL must be placed adjacent to the script. The URL does not have to be live. Example: [generateMetalink.py https://example.com/cat-picture.jpg] where "cat-picture.jpg" is placed next to this script.')
 
-parser.add_argument('path_relative_to_web_root', type=str,
-                    help='Path of the file relative to the web root to have a metalink file generated')
-
-parser.add_argument('--url_base', type=str, default='https://07th-mod.com',
-                    help='Base URL which will be attached to the relative path to form the final download URL')
-
-parser.add_argument('--web_root', type=str, default='/home/07th-mod/web/', help='Web root on the server')
+parser.add_argument('url', type=str,
+                    help='URL of the file for which the metalink file will be generated. The part of the URL after')
 
 parser.add_argument('--chunksize', type=int, default=default_chunk_size,
-                    help='Piece size/Chunk size for calculating hashes (in bytes)')
+                    help=f'Piece size/Chunk size for calculating hashes (in bytes). Defaults to {default_chunk_size >> 20} MB. Higher values increase the amount (one chunk) that needs to be re-downloaded if an error occurs or (depending on the download tool used) if the download is paused. Lower values can make the metalink file unnecessarily large.')
+
+# Make sure help is printed if you pass no arguments to this script
+if len(sys.argv) <= 1:
+    print("ERROR: You need pass the URL of the file for which the metalink will be generated.")
+    print("------------------------------------")
+    parser.print_help()
+    exit(-1)
 
 args = parser.parse_args()
 
-write_metalink_for_file(args.url_base, args.web_root, args.path_relative_to_web_root, args.chunksize)
+write_metalink_for_file(args.url, args.chunksize)
