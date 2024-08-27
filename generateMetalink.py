@@ -86,10 +86,10 @@ def write_metalink_for_file(url: str, chunk_size: int):
 
 default_chunk_size = (1 << 24)
 
-parser = argparse.ArgumentParser(description='Create a metalink from a given URL. The file at the URL must be placed adjacent to the script. The URL does not have to be live. Example: [generateMetalink.py https://example.com/cat-picture.jpg] where "cat-picture.jpg" is placed next to this script.')
+parser = argparse.ArgumentParser(description='Create a metalink from a given URL. The file at the URL must be placed adjacent to the script. The URL does not have to be live. Example: [generateMetalink.py https://example.com/cat-picture.jpg] where "cat-picture.jpg" is placed next to this script. Or you can give a list of URLs via text file.')
 
-parser.add_argument('url', type=str,
-                    help='URL of the file for which the metalink file will be generated. The part of the URL after')
+parser.add_argument('urlOrUrlList', type=str,
+                    help='Either the URL of the file for which the metalink file will be generated, or a list of URLS. If a list of URLS is provided, it must be a text file, one URL per line. The part of the URL after the last slash is assumed to be the file name.')
 
 parser.add_argument('--chunksize', type=int, default=default_chunk_size,
                     help=f'Piece size/Chunk size for calculating hashes (in bytes). Defaults to {default_chunk_size >> 20} MB. Higher values increase the amount (one chunk) that needs to be re-downloaded if an error occurs or (depending on the download tool used) if the download is paused. Lower values can make the metalink file unnecessarily large.')
@@ -103,4 +103,17 @@ if len(sys.argv) <= 1:
 
 args = parser.parse_args()
 
-write_metalink_for_file(args.url, args.chunksize)
+urlOrUrlList = args.urlOrUrlList #type: str
+chunksize = args.chunksize #type: int
+
+if urlOrUrlList.lower().startswith('https://') or urlOrUrlList.lower().startswith("http://"):
+    write_metalink_for_file(urlOrUrlList, chunksize)
+else:
+    with open(urlOrUrlList, encoding='utf-8') as f:
+        lines = f.readlines()
+        i = 0
+        for line in lines:
+            i += 1
+            url = line.strip()
+            print(f"Processing {i}/{len(lines)}: [{url}]")
+            write_metalink_for_file(url, chunksize)
